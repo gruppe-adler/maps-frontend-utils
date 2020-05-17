@@ -2,10 +2,11 @@ import {
     Map as LeafletMap,
     MapOptions as LeafletMapOptions,
     TileLayer as LeafletTileLayer,
-    LatLngBounds
 } from 'leaflet';
 import { satTileLayer, vectorTileLayer, MapMetaData } from '..';
 import { fetchMapMetaData } from '../api';
+
+import 'leaflet/dist/leaflet.css';
 
 export default class GradMap extends LeafletMap {
     private _armaMapName: string;
