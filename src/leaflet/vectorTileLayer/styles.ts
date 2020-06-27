@@ -424,7 +424,7 @@ const styles: {
     water: {
         canvas: {
             strokeStyle: 'transparent',
-            fillStyle: 'transparent'
+            fillStyle: 'rgba(119,161,217,0.5)'
         }
     },
     forest: {
