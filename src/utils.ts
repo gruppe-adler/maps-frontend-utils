@@ -6,7 +6,7 @@ let API_URI = location.origin;
  * Set maps api uri
  * @param url maps api uri
  */
-export const setApiUri = (url: string) => {
+export function setApiUri(url: string) {
     API_URI = url;
 };
 
@@ -14,16 +14,16 @@ export const setApiUri = (url: string) => {
  * Get maps api uri
  * @returns maps uri
  */
-export const getApiUri = (): string => {
+export function getApiUri(): string {
     return API_URI;
 };
 
 
-export const relativeUrl = (path: string): string => {
+export function relativeUrl(path: string): string {
     return `${API_URI}/${path}`;
 };
 
-export const fetchJSON = async (input: RequestInfo, init: RequestInit = {}) => {
+export async function fetchJSON<T>(input: RequestInfo, init: RequestInit = {}): Promise<T> {
     let response: Response;
 
     try {
@@ -34,5 +34,5 @@ export const fetchJSON = async (input: RequestInfo, init: RequestInit = {}) => {
 
     if (!response.ok) throw new ResponseError(response);
 
-    return await response.json();
+    return response.json();
 };
