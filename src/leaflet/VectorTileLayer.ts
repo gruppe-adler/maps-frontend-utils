@@ -1,4 +1,5 @@
 import 'mapbox-gl-leaflet';
+import '../types/mapbox-gl-leaflet';
 import { Style as MapboxStyle } from 'mapbox-gl';
 // @ts-ignore
 import { MapboxGL } from 'leaflet';
