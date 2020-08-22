@@ -5,6 +5,6 @@ import { MapboxGL } from 'leaflet';
 
 export default class VectorTileLayer extends MapboxGL {
     constructor(style: MapboxStyle|string) {
-        super({ style });
+        super({ style, renderWorldCopies: false  });
     }
 };

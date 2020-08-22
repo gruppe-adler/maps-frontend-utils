@@ -43,6 +43,7 @@ export default class GradMap extends LeafletMap {
         const prom1 = vectorTileLayer(this._armaMapName).then(layer => layer.addTo(this));
         const prom2 = satTileLayer(this._armaMapName).then(layer => {
             this._satLayer = layer;
+            layer.setZIndex(-1);
 
             if (this.satShown) layer.addTo(this);
         });
