@@ -1,4 +1,4 @@
-interface MapGrid {
+export interface MapMetaDataGrid {
     format: string;
     formatX: string;
     formatY: string;
@@ -13,7 +13,7 @@ export default interface MapMetaData {
     elevationOffset: number;
     gridOffsetX: number;
     gridOffsetY: number;
-    grids: MapGrid[];
+    grids: MapMetaDataGrid[];
     latitude: number;
     longitude: number;
     version: number;
