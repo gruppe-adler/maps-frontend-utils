@@ -7,15 +7,15 @@ const CHARS = 'ABCDEFGHIJ';
  * @param {string} chr New char
  * @returns {string} New string with replaced char
  */
-function setCharAt(str: string, index: number, chr: string) {
+function setCharAt(str: string, index: number, chr: string): string {
     if(index > str.length-1) return str;
     return str.substring(0,index) + chr + str.substring(index+1);
 }
 
 interface DigitPosition {
-    strIndex: number,
-    value: number,
-    isChar: boolean
+    strIndex: number;
+    value: number;
+    isChar: boolean;
 }
 
 export default class ArmaGridFormat {
@@ -40,6 +40,7 @@ export default class ArmaGridFormat {
             const value = (index > -1) ? index : Number.parseInt(char, 10);
 
             digitPositions.push({
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 strIndex: match.index!,
                 value,
                 isChar: index > -1

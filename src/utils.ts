@@ -6,7 +6,7 @@ let API_URI = location.origin;
  * Set maps api uri
  * @param url maps api uri
  */
-export function setApiUri(url: string) {
+export function setApiUri(url: string): void {
     API_URI = url;
 };
 

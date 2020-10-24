@@ -9,10 +9,69 @@ interface GradGridControlPoint {
 
 type GradGridControlSide = 'left'|'right'|'bottom'|'top';
 
+/**
+ * @param {number} start 
+ * @param {number} step 
+ * @param {number} min 
+ * @param {number} max 
+ * @param {ArmaGridFormat} format
+ * @returns {Array<{ coord: number, str: string }>}
+ */
+const calcLines = (start: number, step: number, min: number, max: number, format: ArmaGridFormat): Array<{ coord: number; str: string }> => {
+    const lines: Array<{ coord: number; str: string }> = [];
+
+    // positive direction
+    let coord = start;
+    let i = 0;
+    while (coord <= max) {
+        if (coord >= min) {
+            lines.push({
+                coord,
+                str: format.formatGridNumber(i),
+            });
+        }
+        coord += step;
+        i++;
+    }
+
+    // negative direction
+    coord = start - step;
+    i = -1;
+    while (coord >= min) {
+        if (coord <= max) {
+            lines.push({
+                coord,
+                str: format.formatGridNumber(i),
+            });
+        }
+        coord -= step;
+        i--;
+    }
+
+    return lines;
+}
+
+const checkLineIntersection = (l1Start: GradGridControlPoint, l1End: GradGridControlPoint, l2Start: GradGridControlPoint, l2End: GradGridControlPoint): null|[number, number] => {
+    const denominator = ((l2End.y - l2Start.y) * (l1End.x - l1Start.x)) - ((l2End.x - l2Start.x) * (l1End.y - l1Start.y));
+    if (denominator === 0) {
+        return null;
+    }
+    const a = l1Start.y - l2Start.y;
+    const b = l1Start.x - l2Start.x;
+    const numerator1 = ((l2End.x - l2Start.x) * a) - ((l2End.y - l2Start.y) * b);
+    const c = numerator1 / denominator;
+
+    // if we cast these lines infinitely in both directions, they intersect here:
+    return [
+        l1Start.x + (c * (l1End.x - l1Start.x)),
+        l1Start.y + (c * (l1End.y - l1Start.y))
+    ];
+};
+
 export default class GradGridControl implements MapboxIControl {
     private gridStart: GradGridControlPoint;
     private worldSize: number;
-    private grids: Map<number, { stepY: number, stepX: number, xFormat: ArmaGridFormat, yFormat: ArmaGridFormat }>;
+    private grids: Map<number, { stepY: number; stepX: number; xFormat: ArmaGridFormat; yFormat: ArmaGridFormat }>;
     private borders: Array<[GradGridControlPoint, GradGridControlPoint, GradGridControlSide]> = [];
 
     private _map: MapboxMap|null = null;
@@ -34,7 +93,7 @@ export default class GradGridControl implements MapboxIControl {
         this.gridStart = { x: 0 - gridOffsetX, y: worldSize - gridOffsetY };
         this.worldSize = worldSize;
         this.grids = new Map();
-        const calczoom = (armaZoom: number) => Math.round(Math.max((1 - armaZoom) * (worldSize * 0.0003), 0));
+        const calczoom = (armaZoom: number): number => Math.round(Math.max((1 - armaZoom) * (worldSize * 0.0003), 0));
 
         for (let i = 0; i < sortedGrids.length; i++) {
             const minzoom = calczoom(sortedGrids[i].zoomMax);
@@ -55,7 +114,7 @@ export default class GradGridControl implements MapboxIControl {
         }
     }
 
-    onAdd (map: MapboxMap) {
+    onAdd (map: MapboxMap): HTMLElement {
         this._map = map;
 
         this._canvas = document.createElement('canvas');
@@ -65,8 +124,8 @@ export default class GradGridControl implements MapboxIControl {
 
         this._context = this._canvas.getContext('2d');
 
-        this._mapResizeCallback = () => this.fixWidthHeight();
-        this._mapRenderCallback = () => this.redraw();
+        this._mapResizeCallback = (): void => this.fixWidthHeight();
+        this._mapRenderCallback = (): void => this.redraw();
         map.on('resize', this._mapResizeCallback);
         map.on('render', this._mapRenderCallback);
 
@@ -82,7 +141,7 @@ export default class GradGridControl implements MapboxIControl {
         return this._control;
     }
     
-    onRemove () {
+    onRemove (): void {
         if (this._canvas !== null) {
             this._canvas.remove();
             this._canvas = null;
@@ -101,7 +160,7 @@ export default class GradGridControl implements MapboxIControl {
         this._map = null;
     }
 
-    private fixWidthHeight () {
+    private fixWidthHeight (): void {
         if (this._map === null || this._canvas === null) return;
 
         const canvas = this._map.getCanvas();
@@ -127,7 +186,7 @@ export default class GradGridControl implements MapboxIControl {
         this.redraw();
     }
 
-    private redraw () {
+    private redraw (): void {
         if (this._context === null || this._canvas === null || this._map === null) return;
 
         this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
@@ -147,7 +206,7 @@ export default class GradGridControl implements MapboxIControl {
         const [minX, minY] = latLngToArma(this.worldSize, [sw.lat, sw.lng]);
         const [maxX, maxY] = latLngToArma(this.worldSize, [ne.lat, ne.lng]);
 
-        
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const { stepX, stepY, yFormat, xFormat } = this.grids.get(zoom)!;
 
         const xLines = calcLines(this.gridStart.x, stepX, minX, maxX, xFormat);
@@ -201,7 +260,7 @@ export default class GradGridControl implements MapboxIControl {
         return intersections;
     }
 
-    drawLabel (x: number, y: number, str: string, type: GradGridControlSide) {
+    drawLabel (x: number, y: number, str: string, type: GradGridControlSide): void {
         if (this._context === null) return;
 
         let xOffset = 0;
@@ -239,67 +298,7 @@ export default class GradGridControl implements MapboxIControl {
         this._context.fillText(str, x + xOffset, y + yOffset);
     }
 
-    getDefaultPosition () {
+    getDefaultPosition (): string {
         return 'top-left';
     }
 }
-
-
-/**
- * @param {number} start 
- * @param {number} step 
- * @param {number} min 
- * @param {number} max 
- * @param {ArmaGridFormat} format
- * @returns {Array<{ coord: number, str: string }>}
- */
-const calcLines = (start: number, step: number, min: number, max: number, format: ArmaGridFormat): Array<{ coord: number, str: string }> => {
-    const lines: Array<{ coord: number, str: string }> = [];
-
-    // positive direction
-    let coord = start;
-    let i = 0;
-    while (coord <= max) {
-        if (coord >= min) {
-            lines.push({
-                coord,
-                str: format.formatGridNumber(i),
-            });
-        }
-        coord += step;
-        i++;
-    }
-
-    // negative direction
-    coord = start - step;
-    i = -1;
-    while (coord >= min) {
-        if (coord <= max) {
-            lines.push({
-                coord,
-                str: format.formatGridNumber(i),
-            });
-        }
-        coord -= step;
-        i--;
-    }
-
-    return lines;
-}
-
-const checkLineIntersection = (l1Start: GradGridControlPoint, l1End: GradGridControlPoint, l2Start: GradGridControlPoint, l2End: GradGridControlPoint) => {
-    const denominator = ((l2End.y - l2Start.y) * (l1End.x - l1Start.x)) - ((l2End.x - l2Start.x) * (l1End.y - l1Start.y));
-    if (denominator === 0) {
-        return null;
-    }
-    const a = l1Start.y - l2Start.y;
-    const b = l1Start.x - l2Start.x;
-    const numerator1 = ((l2End.x - l2Start.x) * a) - ((l2End.y - l2Start.y) * b);
-    const c = numerator1 / denominator;
-
-    // if we cast these lines infinitely in both directions, they intersect here:
-    return [
-        l1Start.x + (c * (l1End.x - l1Start.x)),
-        l1Start.y + (c * (l1End.y - l1Start.y))
-    ];
-};

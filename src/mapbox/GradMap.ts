@@ -1,4 +1,4 @@
-import { Map as MapboxMap, MapboxOptions, Layer as MapboxLayer } from 'mapbox-gl';
+import { Map as MapboxMap, MapboxOptions } from 'mapbox-gl';
 import { GradGridControl } from '.';
 import { fetchMapMetaData, MapMetaData } from '..';
 import { relativeUrl } from '../utils';
@@ -9,11 +9,11 @@ export default class GradMap extends MapboxMap {
     private _armaMapName: string;
     private _armaMapMetaData: MapMetaData|null = null;
 
-    private _satShown: boolean = false;
-    private _gridShown: boolean = true;
+    private _satShown = false;
+    private _gridShown = true;
     private _grid: GradGridControl|null = null;
 
-    constructor(map: string, options: MapboxOptions & { satShown?: boolean, gridShown?: boolean }) {
+    constructor(map: string, options: MapboxOptions & { satShown?: boolean; gridShown?: boolean }) {
         super({
             style: relativeUrl(`${map}/mvt/style.json`),
             renderWorldCopies: false,

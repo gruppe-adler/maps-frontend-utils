@@ -13,13 +13,13 @@ export default class GradMap extends LeafletMap {
     private _armaMapName: string;
     private _armaMapMetaData: MapMetaData|null = null;
 
-    private _satShown: boolean = false;
-    private _gridShown: boolean = true;
-    private _initializationDone: boolean = false;
+    private _satShown = false;
+    private _gridShown = true;
+    private _initializationDone = false;
 
     private _satLayer: LeafletTileLayer|null = null;
 
-    private constructor(map: string, element: string | HTMLElement, options: LeafletMapOptions & { satShown?: boolean, gridShown?: boolean } = {}) {
+    private constructor(map: string, element: string | HTMLElement, options: LeafletMapOptions & { satShown?: boolean; gridShown?: boolean } = {}) {
         super(element, {
             attributionControl: false,
             zoomControl: false,
@@ -34,7 +34,7 @@ export default class GradMap extends LeafletMap {
         if (options.gridShown !== undefined) this._gridShown = options.gridShown;
     }
 
-    public static async new(map: string, element: string | HTMLElement, options: LeafletMapOptions & { satShown?: boolean, gridShown?: boolean } = {}): Promise<GradMap> {
+    public static async new(map: string, element: string | HTMLElement, options: LeafletMapOptions & { satShown?: boolean; gridShown?: boolean } = {}): Promise<GradMap> {
         const mapObj = new GradMap(map, element, options);
         await mapObj.gradInitialize();
         return mapObj;
