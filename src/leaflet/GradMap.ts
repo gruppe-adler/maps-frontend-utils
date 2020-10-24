@@ -3,7 +3,8 @@ import {
     MapOptions as LeafletMapOptions,
     TileLayer as LeafletTileLayer,
 } from 'leaflet';
-import { satTileLayer, vectorTileLayer, MapMetaData } from '..';
+import { MapMetaData  } from '..';
+import { satTileLayer, vectorTileLayer } from '.';
 import { fetchMapMetaData } from '../api';
 
 import 'leaflet/dist/leaflet.css';
