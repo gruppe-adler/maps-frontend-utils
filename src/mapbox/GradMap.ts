@@ -53,7 +53,6 @@ export default class GradMap extends MapboxMap {
             };
 
             mapMetaPromise.then((meta: MapMetaData) => {
-                console.log('yo')
                 const { gridOffsetX, gridOffsetY, worldSize, grids } = meta;
 
                 this._grid = new GradGridControl(gridOffsetX, gridOffsetY, worldSize, grids);
