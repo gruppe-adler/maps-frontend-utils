@@ -93,7 +93,7 @@ export default class GradGridControl implements MapboxIControl {
         this.gridStart = { x: 0 - gridOffsetX, y: worldSize - gridOffsetY };
         this.worldSize = worldSize;
         this.grids = new Map();
-        const calczoom = (armaZoom: number): number => Math.round(Math.max((1 - armaZoom) * (worldSize * 0.0004), 0));
+        const calczoom = (armaZoom: number): number => Math.round(Math.max((1 - armaZoom) * (worldSize * 0.0003), 0));
 
         for (let i = 0; i < sortedGrids.length; i++) {
             const minzoom = calczoom(sortedGrids[i].zoomMax);
