@@ -1,9 +1,11 @@
-import { Map as MapboxMap, MapboxOptions } from 'mapbox-gl';
+import { Map as MapboxMap, MapboxOptions, LngLat as MapboxLngLat } from 'mapbox-gl';
 import { GradGridControl } from '.';
-import { fetchMapMetaData, MapMetaData } from '..';
+import { ArmaGridFormat, fetchMapMetaData, MapMetaData } from '..';
 import { relativeUrl } from '../utils';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { armaToLatLng, latLngToArma } from '../coords';
+import { MapMetaDataGrid } from '../types';
 
 export default class GradMap extends MapboxMap {
     private _armaMapName: string;
@@ -11,7 +13,22 @@ export default class GradMap extends MapboxMap {
 
     private _satShown = false;
     private _gridShown = true;
-    private _grid: GradGridControl|null = null;
+    private _gridControl: GradGridControl|null = null;
+    private _grid: {
+        gridStart: [number, number]
+        stepX: number,
+        stepY: number,
+        formatX: ArmaGridFormat,
+        formatY: ArmaGridFormat,
+        format: string
+    } = {
+        gridStart: [0,0],
+        stepX: 100,
+        stepY: 100,
+        formatX: new ArmaGridFormat('000'),
+        formatY: new ArmaGridFormat('000'),
+        format: 'XY',
+    };
 
     constructor(map: string, options: MapboxOptions & { satShown?: boolean; gridShown?: boolean }) {
         super({
@@ -30,7 +47,7 @@ export default class GradMap extends MapboxMap {
         if (options.satShown !== undefined) this._satShown = options.satShown;
         if (options.gridShown !== undefined) this._gridShown = options.gridShown;
 
-        const mapMetaPromise = fetchMapMetaData(this._armaMapName).then(meta => { this._armaMapMetaData = meta; return meta; });
+        const mapMetaPromise = fetchMapMetaData(this._armaMapName).then(meta => { this._armaMapMetaData = meta; });
 
         this.on('load', () => {
             // add satellite source
@@ -44,24 +61,42 @@ export default class GradMap extends MapboxMap {
 
             // add satellite layer
             if (this.satShown) {
-                this.addLayer({
-                    id: 'satellite',
-                    type: 'raster',
-                    source: 'satellite',
-                    paint: { 'raster-opacity': 0.8 },
-                }, 'water');
+                this.addLayer(
+                    {
+                        id: 'satellite',
+                        type: 'raster',
+                        source: 'satellite',
+                        paint: { 'raster-opacity': 0.8 },
+                    },
+                    'water'
+                );
             };
 
-            mapMetaPromise.then((meta: MapMetaData) => {
-                const { gridOffsetX, gridOffsetY, worldSize, grids } = meta;
-
-                this._grid = new GradGridControl(gridOffsetX, gridOffsetY, worldSize, grids);
-
-                if (!this._gridShown) return;
-
-                this.addControl(this._grid);
-            });
+            mapMetaPromise.then(() => { this.fire('grad-load'); });
         });
+
+        this.on('grad-load', () => {
+            if (this._armaMapMetaData === null) return;
+
+            const { gridOffsetX, gridOffsetY, worldSize, grids } = this._armaMapMetaData;
+
+            // add grid control
+            this._gridControl = new GradGridControl(gridOffsetX, gridOffsetY, worldSize, grids);
+            if (this._gridShown) this.addControl(this._gridControl);
+
+            // find grid for all the way zoomed in
+            const grid = grids.sort((a, b) => a.zoomMax - b.zoomMax)[0];
+            this._grid = {
+                gridStart: [gridOffsetX, worldSize - gridOffsetY],
+                stepX: grid.stepX,
+                stepY: - grid.stepY,
+                formatX: new ArmaGridFormat(grid.formatX),
+                formatY: new ArmaGridFormat(grid.formatY),
+                format: grid.format
+            };
+            
+
+        })
     }
 
     public set satShown(value: boolean) {
@@ -85,12 +120,12 @@ export default class GradMap extends MapboxMap {
     public set gridShown(value: boolean) {
         this._gridShown = value;
 
-        if (this._grid === null) return;
+        if (this._gridControl === null) return;
 
         if (value) {
-            this.addControl(this._grid);
+            this.addControl(this._gridControl);
         } else {
-            this.removeControl(this._grid);
+            this.removeControl(this._gridControl);
         }
     }
 
@@ -102,4 +137,54 @@ export default class GradMap extends MapboxMap {
         return this._armaMapMetaData;
     }
 
+    /**
+     * Project Arma to lat/lng
+     * @param {[number, number]} pos Arma position as [x, y]
+     * @returns {MapboxLngLat} LngLat
+     */
+    public fromArma(pos: [number, number]): MapboxLngLat {
+        if (this._armaMapMetaData === null) {
+            throw new Error('GradMap not fully initialized. Try calling this function after the "grad-init" event has fired');
+        }
+
+        const [lat, lng] = armaToLatLng(this._armaMapMetaData.worldSize, pos);
+
+        return new MapboxLngLat(lng, lat);
+    }
+
+    /**
+     * Project lat/lng to Arma
+     * @param {MapboxLngLat} lngLat LngLat
+     * @returns {[number, number]} Arma position as [x, y]
+     */
+    public toArma(lngLat: MapboxLngLat): [number, number] {
+        if (this._armaMapMetaData === null) {
+            throw new Error('GradMap not fully initialized. Try calling this function after the "grad-init" event has fired');
+        }
+
+        return latLngToArma(this._armaMapMetaData.worldSize, [lngLat.lat, lngLat.lng]);
+    }
+
+    /**
+     * Returns the map grid position of an position.
+     * This does basically the same as the [mapGridPosition scripting command](https://community.bistudio.com/wiki/mapGridPosition).
+     * @param {[number, number]} position Arma position as [x, y]
+     * @returns {string} Formatted grid
+     */
+    public posToGrid([x, y]: [number, number]): string {
+        
+        if (this._armaMapMetaData === null) {
+            throw new Error('GradMap not fully initialized. Try calling this function after the "grad-init" event has fired');
+        }
+
+        const { gridStart, format, formatX, formatY, stepX, stepY } = this._grid;
+
+        const xIndex = Math.floor((x - gridStart[0]) / stepX);
+        const yIndex = Math.floor((y - gridStart[1]) / stepY);
+
+        const xStr = formatX.formatGridNumber(xIndex);
+        const yStr = formatY.formatGridNumber(yIndex);
+
+        return format.replace('X', xStr).replace('Y', yStr);
+    }
 }
