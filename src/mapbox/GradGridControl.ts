@@ -17,8 +17,8 @@ type GradGridControlSide = 'left'|'right'|'bottom'|'top';
  * @param {ArmaGridFormat} format
  * @returns {Array<{ coord: number, str: string }>}
  */
-const calcLines = (start: number, step: number, min: number, max: number, format: ArmaGridFormat): Array<{ coord: number; str: string }> => {
-    const lines: Array<{ coord: number; str: string }> = [];
+const calcLines = (start: number, step: number, min: number, max: number, format: ArmaGridFormat): Array<{ coord: number; str: string, majorStep: boolean }> => {
+    const lines: Array<{ coord: number; str: string, majorStep: boolean }> = [];
 
     // positive direction
     let coord = start;
@@ -28,6 +28,7 @@ const calcLines = (start: number, step: number, min: number, max: number, format
             lines.push({
                 coord,
                 str: format.formatGridNumber(i),
+                majorStep: (i % 10) === 0
             });
         }
         coord += step;
@@ -42,6 +43,7 @@ const calcLines = (start: number, step: number, min: number, max: number, format
             lines.push({
                 coord,
                 str: format.formatGridNumber(i),
+                majorStep: (i % 10) === 0
             });
         }
         coord -= step;
@@ -68,10 +70,16 @@ const checkLineIntersection = (l1Start: GradGridControlPoint, l1End: GradGridCon
     ];
 };
 
+const MAPBOX_FACTOR = 4.5;
+
+const calcZoom = (armaZoom: number): number => {
+    return MAPBOX_FACTOR * (1 - Math.max(armaZoom - 0.001, 0.001))
+}
+
 export default class GradGridControl implements MapboxIControl {
     private gridStart: GradGridControlPoint;
     private worldSize: number;
-    private grids: Map<number, { stepY: number; stepX: number; xFormat: ArmaGridFormat; yFormat: ArmaGridFormat }>;
+    private grids: Array<{ stepY: number; stepX: number; xFormat: ArmaGridFormat; yFormat: ArmaGridFormat; minZoom: number }>;
     private borders: Array<[GradGridControlPoint, GradGridControlPoint, GradGridControlSide]> = [];
 
     private _map: MapboxMap|null = null;
@@ -92,12 +100,9 @@ export default class GradGridControl implements MapboxIControl {
 
         this.gridStart = { x: 0 - gridOffsetX, y: worldSize - gridOffsetY };
         this.worldSize = worldSize;
-        this.grids = new Map();
-        const calczoom = (armaZoom: number): number => Math.round(Math.max((1 - armaZoom) * (worldSize * 0.0003), 0));
+        this.grids = [];
 
         for (let i = 0; i < sortedGrids.length; i++) {
-            const minzoom = calczoom(sortedGrids[i].zoomMax);
-            const maxzoom = sortedGrids.length > i+1 ? calczoom(sortedGrids[i+1].zoomMax) : 24;
 
             const grid = {
                 stepX: sortedGrids[i].stepX,
@@ -105,12 +110,11 @@ export default class GradGridControl implements MapboxIControl {
                 // top left corner whilst the x coordinates go from left to right and the y coordinates go from top to bottom.
                 stepY: - sortedGrids[i].stepY,
                 xFormat: new ArmaGridFormat(sortedGrids[i].formatX),
-                yFormat: new ArmaGridFormat(sortedGrids[i].formatY)
+                yFormat: new ArmaGridFormat(sortedGrids[i].formatY),
+                minZoom: calcZoom(sortedGrids[i].zoomMax)
             };
 
-            for (let zoom = minzoom; zoom <= maxzoom; zoom++) {
-                this.grids.set(zoom, grid);
-            }
+            this.grids.push(grid);
         }
     }
 
@@ -194,10 +198,19 @@ export default class GradGridControl implements MapboxIControl {
         this._context.fillStyle = 'rgba(26, 26, 26, 0.6)';
         this._context.font = '16px monospace';
 
-        const zoom = Math.floor(this._map.getZoom());
+        const zoom = this._map.getZoom();
+
+        // find best matching grid
+        let visibleGrid = null;
+        for (const grid of this.grids) {
+            if (zoom < grid.minZoom) continue;
+            if (visibleGrid === null || grid.minZoom > visibleGrid.minZoom) {
+                visibleGrid = grid
+            }
+        }
 
         // exit if no grid was configured for current zoom
-        if (!this.grids.has(zoom)) return;
+        if (visibleGrid === null) return;
         
         const bounds = this._map.getBounds();
         const sw = bounds.getSouthWest();
@@ -206,8 +219,7 @@ export default class GradGridControl implements MapboxIControl {
         const [minX, minY] = latLngToArma(this.worldSize, [sw.lat, sw.lng]);
         const [maxX, maxY] = latLngToArma(this.worldSize, [ne.lat, ne.lng]);
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const { stepX, stepY, yFormat, xFormat } = this.grids.get(zoom)!;
+        const { stepX, stepY, yFormat, xFormat } = visibleGrid;
 
         const xLines = calcLines(this.gridStart.x, stepX, minX, maxX, xFormat);
         const yLines = calcLines(this.gridStart.y, stepY, minY, maxY, yFormat);
@@ -215,25 +227,25 @@ export default class GradGridControl implements MapboxIControl {
         const labels: Array<[number, number, string, GradGridControlSide]> = []
 
         for (const line of yLines) {
-            const { str, coord: y } = line;
+            const { str, coord: y, majorStep } = line;
             
             const [p1Lat, p1Lng] = armaToLatLng(this.worldSize, [minX, y]);
             const [p2Lat, p2Lng] = armaToLatLng(this.worldSize, [maxX, y]);
             const p1 = this._map.project([p1Lng, p1Lat]);
             const p2 = this._map.project([p2Lng, p2Lat]);
 
-            labels.push(...this.drawLine(p1, p2, str));
+            labels.push(...this.drawLine(p1, p2, str, majorStep));
         }
 
         for (const line of xLines) {
-            const { str, coord: x } = line;
+            const { str, coord: x, majorStep } = line;
 
             const [p1Lat, p1Lng] = armaToLatLng(this.worldSize, [x, minY]);
             const [p2Lat, p2Lng] = armaToLatLng(this.worldSize, [x, maxY]);
             const p1 = this._map.project([p1Lng, p1Lat]);
             const p2 = this._map.project([p2Lng, p2Lat]);
             
-            labels.push(...this.drawLine(p1, p2, str));
+            labels.push(...this.drawLine(p1, p2, str, majorStep));
         }
 
         for (const label of labels) {
@@ -241,9 +253,14 @@ export default class GradGridControl implements MapboxIControl {
         }
     }
 
-    drawLine (point1: GradGridControlPoint, point2: GradGridControlPoint, str: string): Array<[number, number, string, GradGridControlSide]> {
+    drawLine (point1: GradGridControlPoint, point2: GradGridControlPoint, str: string, majorStep: boolean): Array<[number, number, string, GradGridControlSide]> {
         if (this._context === null) return [];
 
+        if (majorStep) {
+            this._context.lineWidth = 2;
+        } else {
+            this._context.lineWidth = 1;
+        }
         this._context.beginPath();
         this._context.moveTo(point1.x, point1.y);
         this._context.lineTo(point2.x, point2.y);
