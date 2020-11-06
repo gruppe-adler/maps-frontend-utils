@@ -1,5 +1,5 @@
 import { Map as MapboxMap, MapboxOptions, LngLat as MapboxLngLat } from 'mapbox-gl';
-import { GradGridControl } from '.';
+import { GradElevationControl, GradGridControl } from '.';
 import { ArmaGridFormat, fetchMapMetaData, MapMetaData } from '..';
 import { relativeUrl } from '../utils';
 
@@ -11,8 +11,10 @@ export default class GradMap extends MapboxMap {
     private _armaMapMetaData: MapMetaData|null = null;
 
     private _satShown = false;
+    private _loadElevation = false;
     private _gridShown = true;
     private _gridControl: GradGridControl|null = null;
+    private _elevationControl: GradElevationControl|null = null;
     private _grid: {
         gridStart: [number, number];
         stepX: number;
@@ -29,7 +31,7 @@ export default class GradMap extends MapboxMap {
         format: 'XY',
     };
 
-    constructor(map: string, options: MapboxOptions & { satShown?: boolean; gridShown?: boolean }) {
+    constructor(map: string, options: MapboxOptions & { satShown?: boolean; gridShown?: boolean; loadElevation?: boolean }) {
         super({
             style: relativeUrl(`${map}/mvt/style.json`),
             renderWorldCopies: false,
@@ -45,6 +47,7 @@ export default class GradMap extends MapboxMap {
         this._armaMapName = map;
         if (options.satShown !== undefined) this._satShown = options.satShown;
         if (options.gridShown !== undefined) this._gridShown = options.gridShown;
+        if (options.loadElevation !== undefined) this._loadElevation = options.loadElevation;
 
         const mapMetaPromise = fetchMapMetaData(this._armaMapName).then(meta => { this._armaMapMetaData = meta; });
 
@@ -71,6 +74,10 @@ export default class GradMap extends MapboxMap {
                 );
             };
 
+            // elevation control
+            this._elevationControl = new GradElevationControl(this._armaMapName);
+            if (this._loadElevation) this.addControl(this._elevationControl);
+
             mapMetaPromise.then(() => { this.fire('grad-load'); });
         });
 
@@ -93,8 +100,6 @@ export default class GradMap extends MapboxMap {
                 formatY: new ArmaGridFormat(grid.formatY),
                 format: grid.format
             };
-            
-
         })
     }
 
@@ -130,6 +135,22 @@ export default class GradMap extends MapboxMap {
 
     public get gridShown(): boolean {
         return this._gridShown;
+    }
+
+    public set loadElevation(value: boolean) {
+        this._loadElevation = value;
+
+        if (this._elevationControl === null) return;
+
+        if (value) {
+            this.addControl(this._elevationControl);
+        } else {
+            this.removeControl(this._elevationControl);
+        }
+    }
+
+    public get loadElevation(): boolean {
+        return this._loadElevation;
     }
 
     public get armaMapMetaData(): MapMetaData|null {
@@ -185,5 +206,20 @@ export default class GradMap extends MapboxMap {
         const yStr = formatY.formatGridNumber(yIndex);
 
         return format.replace('X', xStr).replace('Y', yStr);
+    }
+
+    /**
+     * Get elevation of position.
+     * @param {MapboxLngLat} lngLat LngLat
+     * @returns {number} Elevation (-1 if elevation could not be calculated)
+     */
+    public getElevation(lngLat: MapboxLngLat): number {
+        if (!this._loadElevation) {
+            throw new Error('getElevation only works, when loadElevation is set to true.');
+        }
+        
+        if (this._elevationControl === null) return -1;
+
+        return this._elevationControl.getElevation(lngLat)
     }
 }
