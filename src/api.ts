@@ -21,9 +21,11 @@ export async function fetchMapMetaData(map: string): Promise<MapMetaData> {
  * @param map id of map
  */
 export function mapPreviewImgUrl(map: string, size?: 128|256|512|1024): string {
-    if (size === undefined) {
-        return relativeUrl(`${map}/preview.png`);
+    let path = `${map}/preview.png`
+
+    if (size !== undefined) {
+        path += `?size=${size}`
     }
 
-    return relativeUrl(`${map}/preview_${size}.png`);
+    return relativeUrl(path);
 }
