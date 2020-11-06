@@ -1,5 +1,5 @@
 import GradMap from './GradMap';
-import GradGridControl from './GradGridControl';
+import GradGridControl from './GridControl';
 
 export {
     GradGridControl,
