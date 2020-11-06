@@ -17,8 +17,8 @@ type GradGridControlSide = 'left'|'right'|'bottom'|'top';
  * @param {ArmaGridFormat} format
  * @returns {Array<{ coord: number, str: string }>}
  */
-const calcLines = (start: number, step: number, min: number, max: number, format: ArmaGridFormat): Array<{ coord: number; str: string, majorStep: boolean }> => {
-    const lines: Array<{ coord: number; str: string, majorStep: boolean }> = [];
+const calcLines = (start: number, step: number, min: number, max: number, format: ArmaGridFormat): Array<{ coord: number; str: string; majorStep: boolean }> => {
+    const lines: Array<{ coord: number; str: string; majorStep: boolean }> = [];
 
     // positive direction
     let coord = start;

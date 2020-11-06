@@ -1,4 +1,4 @@
-import { EventData as MapboxEventData, Map as MapboxMap, MapboxEvent, IControl as MapboxIControl, LngLat as MapboxLngLat, MapSourceDataEvent } from 'mapbox-gl';
+import { Map as MapboxMap, IControl as MapboxIControl, LngLat as MapboxLngLat, MapSourceDataEvent } from 'mapbox-gl';
 import { relativeUrl } from '../utils';
 
 import SphericalMercator from '@mapbox/sphericalmercator';
@@ -22,7 +22,7 @@ export default class GradElevationControl implements MapboxIControl {
         this.worldName = worldName;
         this.tiles = new Map<string, Uint8Array>();
 
-        const generateId = () => Math.ceil((Math.random() * 1000000000000000)).toString(16);
+        const generateId = (): string => Math.ceil((Math.random() * 1000000000000000)).toString(16);
         let id = generateId();
         while (takenIds.includes(id)) {
             id = generateId();
@@ -31,10 +31,10 @@ export default class GradElevationControl implements MapboxIControl {
         this.id = `grad-elevation-control-${id}`;
     }
 
-    onAdd (map: MapboxMap) {
+    onAdd (map: MapboxMap): HTMLElement {
         this._map = map;
 
-        this._mapSourceDataCallback = (e: MapSourceDataEvent) => this.onMapSourceData(e);
+        this._mapSourceDataCallback = (e: MapSourceDataEvent): void => this.onMapSourceData(e);
         map.on('sourcedata', this._mapSourceDataCallback);
 
         this._control = document.createElement('div');
@@ -56,7 +56,7 @@ export default class GradElevationControl implements MapboxIControl {
         return this._control;
     }
     
-    onRemove () {
+    onRemove (): void {
         if (this._control !== null) {
             this._control.remove();
             this._control = null;
@@ -74,11 +74,11 @@ export default class GradElevationControl implements MapboxIControl {
         this._map = null;
     }
 
-    getDefaultPosition () {
+    getDefaultPosition (): string {
         return 'top-left';
     }
 
-    private onMapSourceData(e: MapSourceDataEvent) {
+    private onMapSourceData(e: MapSourceDataEvent): void {
         if (e.sourceId !== this.id) return;
         if (e.tile === undefined) return;
         
@@ -97,12 +97,10 @@ export default class GradElevationControl implements MapboxIControl {
             }
         } else if (state === 'unloaded') {
             this.tiles.delete(tileId);
-        } else {
-            console.log(state, e.tile);
         };
     }
 
-    private readTexturePixels(texture: { context: { gl: WebGLRenderingContext }, texture: WebGLTexture, size: [number, number] }) {
+    private readTexturePixels(texture: { context: { gl: WebGLRenderingContext }; texture: WebGLTexture; size: [number, number] }): Uint8Array {
         const { context, texture: webGLTexture, size } = texture;
         const gl = context.gl;
     
@@ -152,6 +150,7 @@ export default class GradElevationControl implements MapboxIControl {
             const id = `${z}/${x}/${y}`;
     
             if (!this.tiles.has(id)) continue;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             const arr = this.tiles.get(id)!;
     
             const pixelX = px[0] % 256;

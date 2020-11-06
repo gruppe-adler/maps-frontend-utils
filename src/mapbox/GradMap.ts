@@ -5,7 +5,6 @@ import { relativeUrl } from '../utils';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { armaToLatLng, latLngToArma } from '../coords';
-import { MapMetaDataGrid } from '../types';
 
 export default class GradMap extends MapboxMap {
     private _armaMapName: string;
@@ -15,12 +14,12 @@ export default class GradMap extends MapboxMap {
     private _gridShown = true;
     private _gridControl: GradGridControl|null = null;
     private _grid: {
-        gridStart: [number, number]
-        stepX: number,
-        stepY: number,
-        formatX: ArmaGridFormat,
-        formatY: ArmaGridFormat,
-        format: string
+        gridStart: [number, number];
+        stepX: number;
+        stepY: number;
+        formatX: ArmaGridFormat;
+        formatY: ArmaGridFormat;
+        format: string;
     } = {
         gridStart: [0,0],
         stepX: 100,
