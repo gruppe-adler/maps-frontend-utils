@@ -169,12 +169,16 @@ export default class GradGridControl implements MapboxIControl {
     private fixWidthHeight (): void {
         if (this._map === null || this._canvas === null) return;
 
+        const factor = window.devicePixelRatio;
+
         const canvas = this._map.getCanvas();
         const { width, height } = canvas.getBoundingClientRect();
-        this._canvas.width = width;
-        this._canvas.height = height;
+        this._canvas.width = width * factor;
+        this._canvas.height = height * factor;
         this._canvas.style.height = `${height}px`;
         this._canvas.style.width = `${width}px`;
+
+        if (this._context) this._context.scale(factor, factor);
 
         // borders
         const tl = { x: 0, y: 0 };
