@@ -1,5 +1,6 @@
 export default class ResponseError extends Error {
-    public response: Response;
+    public readonly response: Response;
+    public readonly type = 'GradResponseError';
 
     constructor(response: Response) {
         super(response.statusText);

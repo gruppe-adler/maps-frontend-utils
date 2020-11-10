@@ -1,6 +1,6 @@
 import { Map as MapboxMap, MapboxOptions, LngLat as MapboxLngLat } from 'mapbox-gl';
 import { GradElevationControl, GradGridControl } from '.';
-import { ArmaGridFormat, fetchMapMetaData, MapMetaData } from '..';
+import { ArmaGridFormat, fetchMapMetaData, MapMetaData, ResponseError } from '..';
 import { relativeUrl } from '../utils';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -49,7 +49,16 @@ export default class GradMap extends MapboxMap {
         if (options.gridShown !== undefined) this._gridShown = options.gridShown;
         if (options.loadElevation !== undefined) this._loadElevation = options.loadElevation;
 
-        const mapMetaPromise = fetchMapMetaData(this._armaMapName).then(meta => { this._armaMapMetaData = meta; });
+        const mapMetaPromise = fetchMapMetaData(this._armaMapName)
+            .then(meta => { this._armaMapMetaData = meta; })
+            .catch(e => {
+                if (e.type === 'GradResponseError') {
+                    const err = e as ResponseError;
+
+                    if (err.response.status === 404) this.fire('error:mapnotfound');
+                }
+                this.fire('error', e);
+            });
 
         this.on('load', () => {
             // add satellite source
