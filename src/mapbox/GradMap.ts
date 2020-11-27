@@ -72,6 +72,8 @@ export default class GradMap extends MapboxMap {
 
             // add satellite layer
             if (this.satShown) {
+                const { layers } = this.getStyle();
+
                 this.addLayer(
                     {
                         id: 'satellite',
@@ -79,7 +81,7 @@ export default class GradMap extends MapboxMap {
                         source: 'satellite',
                         paint: { 'raster-opacity': 0.8 },
                     },
-                    'water'
+                    layers !== undefined && layers.length > 1 ? layers[1].id : undefined
                 );
             };
 
@@ -116,12 +118,14 @@ export default class GradMap extends MapboxMap {
         this._satShown = value;
         
         if (value) {
+            const { layers } = this.getStyle();
+
             this.addLayer({
                 id: 'satellite',
                 type: 'raster',
                 source: 'satellite',
                 paint: { 'raster-opacity': 0.8 },
-            }, 'water');
+            }, layers !== undefined && layers.length > 1 ? layers[1].id : undefined);
         } else {
             this.removeLayer('satellite')
         }
