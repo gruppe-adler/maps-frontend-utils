@@ -127,6 +127,8 @@ export default class GradMap extends MapboxMap {
                 paint: { 'raster-opacity': 0.8 },
             }, layers !== undefined && layers.length > 1 ? layers[1].id : undefined);
         } else {
+            if (this.getLayer('satellite') === undefined) return;
+
             this.removeLayer('satellite')
         }
     }
