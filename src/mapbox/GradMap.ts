@@ -115,6 +115,8 @@ export default class GradMap extends MapboxMap {
     }
 
     public set satShown(value: boolean) {
+        if (this._satShown === value) return;
+
         this._satShown = value;
         
         if (value) {
@@ -137,6 +139,8 @@ export default class GradMap extends MapboxMap {
     }
 
     public set gridShown(value: boolean) {
+        if (this._gridShown === value) return;
+
         this._gridShown = value;
 
         if (this._gridControl === null) return;
